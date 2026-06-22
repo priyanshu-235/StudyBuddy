@@ -1,5 +1,6 @@
 const redisClient = require("../config/redis");
 const User =  require("../models/user")
+const Problem = require("../models/problem");
 const validate = require('../utils/validator');
 const bcrypt = require("bcrypt");
 const jwt = require('jsonwebtoken');
@@ -146,5 +147,81 @@ const deleteProfile = async(req,res)=>{
     }
 }
 
+const getProfile = async (req, res) => {
+    try {
+        const userId = req.result._id;
 
-module.exports = {register, login,logout,adminRegister,deleteProfile};
+        const user = await User.findById(userId)
+            .select('-password')
+            .populate({
+                path: 'problemSolved',
+                select: '_id title difficulty tags'
+            });
+
+        if (!user) {
+            return res.status(404).send('User not found');
+        }
+
+        const totalProblems = await Problem.countDocuments();
+        const totalSubmissions = await Submission.countDocuments({ userId });
+        const acceptedSubmissions = await Submission.countDocuments({ userId, status: 'accepted' });
+
+        const difficultyStats = { easy: 0, medium: 0, hard: 0 };
+        user.problemSolved.forEach((problem) => {
+            const key = problem.difficulty?.toLowerCase();
+            if (key && difficultyStats[key] !== undefined) {
+                difficultyStats[key]++;
+            }
+        });
+
+        const recentSubmissions = await Submission.find({ userId })
+            .sort({ createdAt: -1 })
+            .limit(15)
+            .populate('problemId', 'title difficulty');
+
+        res.status(200).json({
+            user: {
+                _id: user._id,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                emailId: user.emailId,
+                age: user.age,
+                role: user.role,
+                memberSince: user.createdAt,
+            },
+            stats: {
+                totalSolved: user.problemSolved.length,
+                totalProblems,
+                totalSubmissions,
+                acceptedSubmissions,
+                acceptanceRate: totalSubmissions
+                    ? Math.round((acceptedSubmissions / totalSubmissions) * 100)
+                    : 0,
+                difficultyStats,
+            },
+            solvedProblems: user.problemSolved,
+            recentSubmissions: recentSubmissions.map((submission) => ({
+                _id: submission._id,
+                status: submission.status,
+                language: submission.language,
+                runtime: submission.runtime,
+                memory: submission.memory,
+                testCasesPassed: submission.testCasesPassed,
+                testCasesTotal: submission.testCasesTotal,
+                createdAt: submission.createdAt,
+                problem: submission.problemId
+                    ? {
+                        _id: submission.problemId._id,
+                        title: submission.problemId.title,
+                        difficulty: submission.problemId.difficulty,
+                    }
+                    : null,
+            })),
+        });
+    } catch (err) {
+        res.status(500).send('Internal Server Error');
+    }
+};
+
+
+module.exports = {register, login, logout, adminRegister, deleteProfile, getProfile};

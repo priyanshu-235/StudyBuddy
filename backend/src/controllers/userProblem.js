@@ -197,6 +197,26 @@ const getProblemById = async(req,res)=>{
   }
 }
 
+const getProblemForUpdate = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    if (!id) {
+      return res.status(400).send('ID is Missing');
+    }
+
+    const problem = await Problem.findById(id);
+
+    if (!problem) {
+      return res.status(404).send('Problem is Missing');
+    }
+
+    res.status(200).send(problem);
+  } catch (err) {
+    res.status(500).send('Error: ' + err);
+  }
+};
+
 const getAllProblem = async(req,res)=>{
 
   try{
@@ -255,6 +275,6 @@ const submittedProblem = async(req,res)=>{
 
 
 
-module.exports = {createProblem,updateProblem,deleteProblem,getProblemById,getAllProblem,solvedAllProblembyUser,submittedProblem};
+module.exports = {createProblem,updateProblem,deleteProblem,getProblemById,getProblemForUpdate,getAllProblem,solvedAllProblembyUser,submittedProblem};
 
 
