@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink } from 'react-router';
 import { useDispatch, useSelector } from 'react-redux';
 import axiosClient from '../utils/axiosClient';
@@ -25,6 +25,30 @@ const getInitials = (firstName, emailId) => {
   return '?';
 };
 
+const PAGE_SIZE = 10;
+const SEARCH_DEBOUNCE_MS = 300;
+const MAX_SUGGESTIONS = 6;
+
+const matchesSearch = (problem, query) => {
+  if (!query) return true;
+  const normalizedQuery = query.toLowerCase();
+  return (
+    problem.title?.toLowerCase().includes(normalizedQuery) ||
+    problem.tags?.toLowerCase().includes(normalizedQuery)
+  );
+};
+
+function useDebounce(value, delay) {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
 function Homepage() {
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
@@ -36,7 +60,14 @@ function Homepage() {
     status: 'all'
   });
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [searchInput, setSearchInput] = useState('');
+  const [appliedSearch, setAppliedSearch] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const profileMenuRef = useRef(null);
+  const searchContainerRef = useRef(null);
+
+  const debouncedSearchInput = useDebounce(searchInput, SEARCH_DEBOUNCE_MS);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -51,6 +82,20 @@ function Homepage() {
 
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [profileMenuOpen]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target)) {
+        setShowSuggestions(false);
+      }
+    };
+
+    if (showSuggestions) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showSuggestions]);
 
   useEffect(() => {
     const fetchProblems = async () => {
@@ -80,15 +125,92 @@ function Homepage() {
     setSolvedProblems([]);
   };
 
-  const filteredProblems = problems.filter(problem => {
-    const difficultyMatch = filters.difficulty === 'all' || problem.difficulty === filters.difficulty;
-    const tagMatch = filters.tag === 'all' || problem.tags === filters.tag;
-    const statusMatch = filters.status === 'all' ||
-                      solvedProblems.some(sp => sp._id === problem._id);
-    return difficultyMatch && tagMatch && statusMatch;
-  });
+  const solvedProblemIds = useMemo(
+    () => new Set(solvedProblems.map((problem) => problem._id)),
+    [solvedProblems]
+  );
 
-  const isSolved = (problemId) => solvedProblems.some(sp => sp._id === problemId);
+  const filteredProblems = useMemo(() => {
+    return problems.filter((problem) => {
+      const difficultyMatch = filters.difficulty === 'all' || problem.difficulty === filters.difficulty;
+      const tagMatch = filters.tag === 'all' || problem.tags === filters.tag;
+      const statusMatch = filters.status === 'all' || solvedProblemIds.has(problem._id);
+      const searchMatch = matchesSearch(problem, appliedSearch);
+      return difficultyMatch && tagMatch && statusMatch && searchMatch;
+    });
+  }, [problems, filters, solvedProblemIds, appliedSearch]);
+
+  const suggestions = useMemo(() => {
+    const query = debouncedSearchInput.trim();
+    if (query.length < 2) return [];
+
+    return problems
+      .filter((problem) => matchesSearch(problem, query))
+      .slice(0, MAX_SUGGESTIONS);
+  }, [problems, debouncedSearchInput]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredProblems.length / PAGE_SIZE));
+
+  const paginatedProblems = useMemo(() => {
+    const startIndex = (currentPage - 1) * PAGE_SIZE;
+    return filteredProblems.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [filteredProblems, currentPage]);
+
+  const pageStart = filteredProblems.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
+  const pageEnd = Math.min(currentPage * PAGE_SIZE, filteredProblems.length);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters, appliedSearch]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  const isSolved = useCallback(
+    (problemId) => solvedProblemIds.has(problemId),
+    [solvedProblemIds]
+  );
+
+  const handleSearchChange = (event) => {
+    setSearchInput(event.target.value);
+    setShowSuggestions(true);
+  };
+
+  const applySearch = () => {
+    setAppliedSearch(searchInput.trim());
+    setShowSuggestions(false);
+    setCurrentPage(1);
+  };
+
+  const handleSearchKeyDown = (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      applySearch();
+    } else if (event.key === 'Escape') {
+      setShowSuggestions(false);
+    }
+  };
+
+  const clearSearch = () => {
+    setSearchInput('');
+    setAppliedSearch('');
+    setShowSuggestions(false);
+    setCurrentPage(1);
+  };
+
+  const handleSuggestionSelect = (title) => {
+    setSearchInput(title);
+    setAppliedSearch(title);
+    setShowSuggestions(false);
+    setCurrentPage(1);
+  };
+
+  const goToPage = (page) => {
+    setCurrentPage(Math.min(Math.max(page, 1), totalPages));
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950/30 text-slate-200">
@@ -216,8 +338,87 @@ function Homepage() {
             Problems
           </h1>
           <p className="text-slate-500 text-sm mt-1">
-            {filteredProblems.length} problem{filteredProblems.length !== 1 ? 's' : ''} available
+            {filteredProblems.length} problem{filteredProblems.length !== 1 ? 's' : ''} found
+            {appliedSearch && (
+              <span> for &quot;{appliedSearch}&quot;</span>
+            )}
+            {filteredProblems.length > 0 && (
+              <span> · showing {pageStart}-{pageEnd}</span>
+            )}
           </p>
+        </div>
+
+        {/* Search */}
+        <div className={`${panelCardClass} p-4 mb-6`}>
+          <div ref={searchContainerRef} className="relative">
+            <label htmlFor="problem-search" className="text-sm font-medium text-emerald-300/90 mb-2 block">
+              Search Problems
+            </label>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <input
+                  id="problem-search"
+                  type="text"
+                  value={searchInput}
+                  onChange={handleSearchChange}
+                  onFocus={() => searchInput.trim().length >= 2 && setShowSuggestions(true)}
+                  onKeyDown={handleSearchKeyDown}
+                  placeholder="Search by title or tag... (press Enter to search)"
+                  className="w-full px-4 py-2.5 text-sm rounded-lg border border-emerald-500/25 bg-slate-800/60 text-slate-200 outline-none transition-all focus:border-emerald-400/50 focus:shadow-[0_0_14px_rgba(52,211,153,0.12)] hover:border-emerald-500/40"
+                  autoComplete="off"
+                />
+                {searchInput && (
+                  <button
+                    type="button"
+                    onClick={clearSearch}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-emerald-300 transition-colors"
+                    aria-label="Clear search"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={applySearch}
+                className="px-4 py-2.5 text-sm font-medium rounded-lg border border-emerald-500/40 text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 hover:border-emerald-400/60 transition-all shrink-0"
+              >
+                Search
+              </button>
+            </div>
+
+            {showSuggestions && debouncedSearchInput.trim().length >= 2 && (
+              <ul className="absolute left-0 right-0 top-full mt-2 p-2 rounded-xl border border-emerald-500/20 bg-slate-900/95 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.45)] z-40 max-h-64 overflow-y-auto">
+                {suggestions.length === 0 ? (
+                  <li className="px-3 py-2 text-sm text-slate-500 italic list-none">
+                    No matching problems
+                  </li>
+                ) : (
+                  suggestions.map((problem) => (
+                    <li key={problem._id} className="list-none">
+                      <button
+                        type="button"
+                        onClick={() => handleSuggestionSelect(problem.title)}
+                        className="w-full text-left px-3 py-2 rounded-lg hover:bg-emerald-500/10 transition-colors"
+                      >
+                        <span className="text-sm text-slate-200 block truncate">{problem.title}</span>
+                        <span className="text-xs text-slate-500 capitalize">{problem.difficulty} · {problem.tags}</span>
+                      </button>
+                    </li>
+                  ))
+                )}
+                <li className="list-none border-t border-emerald-500/10 mt-1 pt-1">
+                  <button
+                    type="button"
+                    onClick={applySearch}
+                    className="w-full text-left px-3 py-2 text-xs text-emerald-400 hover:bg-emerald-500/10 rounded-lg"
+                  >
+                    Press Enter to see all results for &quot;{debouncedSearchInput.trim()}&quot;
+                  </button>
+                </li>
+              </ul>
+            )}
+          </div>
         </div>
 
         {/* Filters */}
@@ -261,10 +462,14 @@ function Homepage() {
         <div className="grid gap-4">
           {filteredProblems.length === 0 ? (
             <div className={`${panelCardClass} p-10 text-center`}>
-              <p className="text-slate-500 italic">No problems match your filters.</p>
+              <p className="text-slate-500 italic">
+                {appliedSearch
+                  ? `No problems match "${appliedSearch}" with the current filters.`
+                  : 'No problems match your filters.'}
+              </p>
             </div>
           ) : (
-            filteredProblems.map(problem => (
+            paginatedProblems.map(problem => (
               <div
                 key={problem._id}
                 className={`${panelCardClass} p-5 transition-all duration-200 hover:border-emerald-400/35 hover:shadow-[inset_0_1px_0_rgba(52,211,153,0.12),0_6px_28px_rgba(52,211,153,0.08)] group`}
@@ -303,6 +508,61 @@ function Homepage() {
             ))
           )}
         </div>
+
+        {filteredProblems.length > 0 && totalPages > 1 && (
+          <div className={`${panelCardClass} p-4 mt-6 flex flex-wrap items-center justify-between gap-4`}>
+            <p className="text-sm text-slate-500">
+              Page {currentPage} of {totalPages}
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => goToPage(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 text-sm rounded-lg border border-emerald-500/25 text-slate-300 hover:border-emerald-400/40 hover:text-emerald-200 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              >
+                Previous
+              </button>
+
+              {Array.from({ length: totalPages }, (_, index) => index + 1)
+                .filter((page) => {
+                  if (totalPages <= 7) return true;
+                  return (
+                    page === 1 ||
+                    page === totalPages ||
+                    Math.abs(page - currentPage) <= 1
+                  );
+                })
+                .map((page, index, visiblePages) => (
+                  <span key={page} className="flex items-center gap-2">
+                    {index > 0 && visiblePages[index - 1] !== page - 1 && (
+                      <span className="text-slate-600">...</span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => goToPage(page)}
+                      className={`min-w-9 px-3 py-1.5 text-sm rounded-lg border transition-all ${
+                        currentPage === page
+                          ? 'border-emerald-400/50 text-emerald-300 bg-emerald-500/15'
+                          : 'border-emerald-500/25 text-slate-300 hover:border-emerald-400/40 hover:text-emerald-200'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  </span>
+                ))}
+
+              <button
+                type="button"
+                onClick={() => goToPage(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1.5 text-sm rounded-lg border border-emerald-500/25 text-slate-300 hover:border-emerald-400/40 hover:text-emerald-200 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

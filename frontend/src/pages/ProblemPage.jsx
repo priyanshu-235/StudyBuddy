@@ -10,7 +10,7 @@ import Editorial from '../components/Editorial';
 const langMap = {
         cpp: 'c++',
         java: 'java',
-        javascript: 'javaScript'
+        javascript: 'javascript'
 };
 
 const LEFT_TABS = [
