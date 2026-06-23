@@ -6,6 +6,7 @@ import axiosClient from "../utils/axiosClient"
 import SubmissionHistory from "../components/SubmissionHistory"
 import ChatAi from '../components/ChatAi';
 import Editorial from '../components/Editorial';
+import Discussions from '../components/Discussions';
 
 const langMap = {
         cpp: 'c++',
@@ -18,6 +19,7 @@ const LEFT_TABS = [
   { id: 'editorial', label: 'Editorial' },
   { id: 'solutions', label: 'Solutions' },
   { id: 'submissions', label: 'Submissions' },
+  { id: 'discussions', label: 'Discussions' },
   { id: 'chatAI', label: 'ChatAI' },
 ];
 
@@ -285,6 +287,16 @@ const ProblemPage = () => {
                   <div className={`${panelCardClass} p-5 text-slate-400`}>
                     <SubmissionHistory problemId={problemId} />
                   </div>
+                </div>
+              )}
+
+              {activeLeftTab === 'discussions' && (
+                <div>
+                  <h2 className="text-xl font-bold mb-4 text-emerald-300/90 flex items-center gap-2">
+                    <span className="w-1 h-6 rounded-full bg-gradient-to-b from-emerald-400 to-teal-600"></span>
+                    Discussions
+                  </h2>
+                  <Discussions problemId={problemId} />
                 </div>
               )}
 
