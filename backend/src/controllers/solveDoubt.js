@@ -11,7 +11,7 @@ const solveDoubt = async(req , res)=>{
        
         async function main() {
         const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-2.5-pro",
         contents: messages,
         config: {
         systemInstruction: `
@@ -87,7 +87,7 @@ Remember: Your goal is to help users learn and understand DSA concepts through t
     res.status(201).json({
         message:response.text
     });
-    console.log(response.text);
+    
     }
 
     main();
