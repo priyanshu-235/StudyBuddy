@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import axiosClient from '../utils/axiosClient';
+import AlertBanner from './AlertBanner';
+import { getErrorMessage } from '../utils/getErrorMessage';
 
 const panelCardClass =
   'rounded-xl border border-emerald-500/20 bg-gradient-to-br from-slate-800/80 to-slate-900/90 shadow-[inset_0_1px_0_rgba(52,211,153,0.08),0_4px_20px_rgba(0,0,0,0.35)]';
@@ -51,6 +53,8 @@ function Discussions({ problemId }) {
   });
   const [newComment, setNewComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [actionError, setActionError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
 
   const fetchThreads = useCallback(async () => {
     try {
@@ -63,7 +67,7 @@ function Discussions({ problemId }) {
       setError(null);
     } catch (err) {
       console.error(err);
-      setError('Failed to load discussions');
+      setError(getErrorMessage(err, 'Failed to load discussions'));
     } finally {
       setLoading(false);
     }
@@ -85,7 +89,7 @@ function Discussions({ problemId }) {
       setError(null);
     } catch (err) {
       console.error(err);
-      setError('Failed to load thread');
+      setError(getErrorMessage(err, 'Failed to load thread'));
       setView('list');
     } finally {
       setDetailLoading(false);
@@ -98,13 +102,15 @@ function Discussions({ problemId }) {
 
     try {
       setSubmitting(true);
+      setActionError(null);
       await axiosClient.post(`/discussion/${problemId}/threads`, newThread);
       setNewThread({ title: '', content: '', type: 'discussion' });
       setShowCreateForm(false);
       setPage(1);
+      setSuccessMessage('Thread created successfully');
       await fetchThreads();
     } catch (err) {
-      alert(err.response?.data || 'Failed to create thread');
+      setActionError(getErrorMessage(err, 'Failed to create thread'));
     } finally {
       setSubmitting(false);
     }
@@ -127,7 +133,7 @@ function Discussions({ problemId }) {
         commentCount: (prev.commentCount || comments.length) + 1,
       }));
     } catch (err) {
-      alert(err.response?.data || 'Failed to add comment');
+      setActionError(getErrorMessage(err, 'Failed to add comment'));
     } finally {
       setSubmitting(false);
     }
@@ -192,7 +198,7 @@ function Discussions({ problemId }) {
       setComments([]);
       fetchThreads();
     } catch (err) {
-      alert(err.response?.data || 'Failed to delete thread');
+      setActionError(getErrorMessage(err, 'Failed to delete thread'));
     }
   };
 
@@ -325,6 +331,9 @@ function Discussions({ problemId }) {
 
   return (
     <div className="space-y-4">
+      <AlertBanner type="error" message={actionError} onDismiss={() => setActionError(null)} />
+      <AlertBanner type="success" message={successMessage} onDismiss={() => setSuccessMessage(null)} />
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-2">
           {THREAD_TYPES.map(({ value, label }) => (
@@ -410,7 +419,7 @@ function Discussions({ problemId }) {
           <span className="loading loading-spinner loading-lg text-emerald-400"></span>
         </div>
       ) : error ? (
-        <div className={`${panelCardClass} p-6 text-center text-rose-300`}>{error}</div>
+        <AlertBanner type="error" message={error} />
       ) : threads.length === 0 ? (
         <div className={`${panelCardClass} p-8 text-center`}>
           <p className="text-slate-500 italic">No discussions yet.</p>

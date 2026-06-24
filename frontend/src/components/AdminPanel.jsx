@@ -2,7 +2,10 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import axiosClient from '../utils/axiosClient';
+import AlertBanner from './AlertBanner';
+import { getErrorMessage } from '../utils/getErrorMessage';
 import { useNavigate } from 'react-router';
+import { useState } from 'react';
 
 // Zod schema matching the problem schema
 const problemSchema = z.object({
@@ -39,6 +42,8 @@ const problemSchema = z.object({
 
 function AdminPanel() {
   const navigate = useNavigate();
+  const [submitError, setSubmitError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
   const {
     register,
     control,
@@ -80,17 +85,21 @@ function AdminPanel() {
 
   const onSubmit = async (data) => {
     try {
+      setSubmitError(null);
       await axiosClient.post('/problem/create', data);
-      alert('Problem created successfully!');
-      navigate('/');
+      setSuccessMessage('Problem created successfully!');
+      setTimeout(() => navigate('/'), 1500);
     } catch (error) {
-      alert(`Error: ${error.response?.data?.message || error.message}`);
+      setSubmitError(getErrorMessage(error, 'Failed to create problem'));
     }
   };
 
   return (
     <div className="container mx-auto p-6">
       <h1 className="text-3xl font-bold mb-6">Create New Problem</h1>
+
+      <AlertBanner type="error" message={submitError} onDismiss={() => setSubmitError(null)} className="mb-4" />
+      <AlertBanner type="success" message={successMessage} className="mb-4" />
       
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* Basic Information */}

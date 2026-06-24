@@ -1,13 +1,15 @@
 import { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import axiosClient from "../utils/axiosClient";
+import { getErrorMessage } from "../utils/getErrorMessage";
+import AlertBanner from "./AlertBanner";
 import { Send } from 'lucide-react';
 
 function ChatAi({problem}) {
     const [messages, setMessages] = useState([
-        { role: 'model', parts:[{text: "Hi, How are you"}]},
-        { role: 'user', parts:[{text: "I am Good"}]}
+        { role: 'model', parts:[{text: "Hi! Ask me anything about this problem."}]},
     ]);
+    const [chatError, setChatError] = useState(null);
 
     const { register, handleSubmit, reset,formState: {errors} } = useForm();
     const messagesEndRef = useRef(null);
@@ -20,6 +22,7 @@ function ChatAi({problem}) {
         
         setMessages(prev => [...prev, { role: 'user', parts:[{text: data.message}] }]);
         reset();
+        setChatError(null);
 
         try {
             
@@ -38,9 +41,11 @@ function ChatAi({problem}) {
             }]);
         } catch (error) {
             console.error("API Error:", error);
+            const message = getErrorMessage(error, 'Failed to get a response from AI');
+            setChatError(message);
             setMessages(prev => [...prev, { 
                 role: 'model', 
-                parts:[{text: "Error from AI Chatbot"}]
+                parts:[{text: message}] 
             }]);
         }
     };
@@ -48,6 +53,7 @@ function ChatAi({problem}) {
     return (
         <div className="flex flex-col h-screen max-h-[80vh] min-h-[500px]">
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <AlertBanner type="error" message={chatError} onDismiss={() => setChatError(null)} />
                 {messages.map((msg, index) => (
                     <div 
                         key={index} 

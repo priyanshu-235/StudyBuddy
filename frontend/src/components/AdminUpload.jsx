@@ -3,6 +3,8 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import axios from 'axios';
 import axiosClient from '../utils/axiosClient'
+import { getErrorMessage } from '../utils/getErrorMessage';
+import AlertBanner from './AlertBanner';
 
 function AdminUpload(){
     
@@ -73,7 +75,7 @@ function AdminUpload(){
           console.error('Upload error:', err);
           setError('root', {
             type: 'manual',
-            message: err.response?.data?.message || 'Upload failed. Please try again.'
+            message: getErrorMessage(err, 'Upload failed. Please try again.'),
           });
         } finally {
           setUploading(false);

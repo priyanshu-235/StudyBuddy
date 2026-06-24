@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Edit, Trash2, Home, RefreshCw, Zap,Video } from 'lucide-react';
+import { Plus, Edit, Trash2, Home, RefreshCw, Zap, Video, Map } from 'lucide-react';
 import { NavLink } from 'react-router';
 
 function Admin() {
@@ -41,6 +41,15 @@ function Admin() {
       color: 'btn-success',
       bgColor: 'bg-success/10',
       route: '/admin/video'
+    },
+    {
+      id: 'roadmap',
+      title: 'Manage Roadmap',
+      description: 'Add, remove, and organize problems by topic',
+      icon: Map,
+      color: 'btn-info',
+      bgColor: 'bg-info/10',
+      route: '/admin/roadmap'
     }
   ];
 

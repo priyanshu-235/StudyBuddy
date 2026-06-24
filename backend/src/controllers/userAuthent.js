@@ -41,7 +41,7 @@ const register = async (req,res)=>{
 
 
 const login = async (req,res)=>{
-    console.log("in login")
+    
     try{
         const {emailId, password} = req.body;
 

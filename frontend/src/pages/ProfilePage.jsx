@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router';
 import axiosClient from '../utils/axiosClient';
+import AlertBanner from '../components/AlertBanner';
+import { getErrorMessage } from '../utils/getErrorMessage';
 
 const panelCardClass =
   'rounded-xl border border-emerald-500/20 bg-gradient-to-br from-slate-800/80 to-slate-900/90 shadow-[inset_0_1px_0_rgba(52,211,153,0.08),0_4px_20px_rgba(0,0,0,0.35)]';
@@ -64,7 +66,7 @@ function ProfilePage() {
         setError(null);
       } catch (err) {
         console.error('Error fetching profile:', err);
-        setError('Failed to load profile');
+        setError(getErrorMessage(err, 'Failed to load profile'));
       } finally {
         setLoading(false);
       }
@@ -92,7 +94,7 @@ function ProfilePage() {
   if (error || !profile) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950/30 text-slate-200">
-        <p className="text-rose-300 mb-4">{error || 'Profile not found'}</p>
+        <AlertBanner type="error" message={error || 'Profile not found'} className="mb-4" />
         <NavLink to="/" className="px-4 py-2 rounded-lg border border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10 transition-all">
           Back to Problems
         </NavLink>

@@ -13,6 +13,8 @@ import AdminVideo from "./components/AdminVideo"
 import AdminDelete from "./components/AdminDelete"
 import AdminUpdate from "./components/AdminUpdate"
 import AdminUpload from "./components/AdminUpload"
+import AdminRoadmap from "./components/AdminRoadmap"
+import RoadmapPage from "./pages/RoadmapPage"
 
 function App(){
   
@@ -43,6 +45,8 @@ function App(){
       <Route path="/admin/delete" element={isAuthenticated && user?.role === 'admin' ? <AdminDelete /> : <Navigate to="/" />} />
       <Route path="/admin/video" element={isAuthenticated && user?.role === 'admin' ? <AdminVideo /> : <Navigate to="/" />} />
       <Route path="/admin/upload/:problemId" element={isAuthenticated && user?.role === 'admin' ? <AdminUpload /> : <Navigate to="/" />} />
+      <Route path="/admin/roadmap" element={isAuthenticated && user?.role === 'admin' ? <AdminRoadmap /> : <Navigate to="/" />} />
+      <Route path="/roadmap" element={isAuthenticated ? <RoadmapPage /> : <Navigate to="/signup" />} />
       <Route path="/problem/:problemId" element={<ProblemPage/>}></Route>
       <Route path="/profile" element={isAuthenticated ? <ProfilePage /> : <Navigate to="/signup" />} />
     </Routes>

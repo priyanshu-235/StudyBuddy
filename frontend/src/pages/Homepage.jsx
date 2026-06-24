@@ -3,6 +3,8 @@ import { NavLink } from 'react-router';
 import { useDispatch, useSelector } from 'react-redux';
 import axiosClient from '../utils/axiosClient';
 import { logoutUser } from '../authSlice';
+import AlertBanner from '../components/AlertBanner';
+import { getErrorMessage } from '../utils/getErrorMessage';
 
 const panelCardClass =
   'rounded-xl border border-emerald-500/20 bg-gradient-to-br from-slate-800/80 to-slate-900/90 shadow-[inset_0_1px_0_rgba(52,211,153,0.08),0_4px_20px_rgba(0,0,0,0.35)]';
@@ -59,6 +61,7 @@ function Homepage() {
     tag: 'all',
     status: 'all'
   });
+  const [problemsError, setProblemsError] = useState(null);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [searchInput, setSearchInput] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
@@ -102,8 +105,10 @@ function Homepage() {
       try {
         const { data } = await axiosClient.get('/problem/getAllProblem');
         setProblems(data);
+        setProblemsError(null);
       } catch (error) {
         console.error('Error fetching problems:', error);
+        setProblemsError(getErrorMessage(error, 'Failed to load problems'));
       }
     };
 
@@ -226,7 +231,7 @@ function Homepage() {
             </div>
             <div>
               <NavLink to="/" className="text-xl font-bold bg-gradient-to-r from-emerald-200 via-teal-200 to-slate-100 bg-clip-text text-transparent hover:opacity-90 transition-opacity">
-                StydyBuDDy
+                StudyBuDDy
               </NavLink>
               <p className="text-xs text-slate-500 hidden sm:block">Practice · Solve · Grow</p>
             </div>
@@ -234,6 +239,15 @@ function Homepage() {
 
           {/* Stats + Profile */}
           <div className="flex items-center gap-3 sm:gap-4">
+            <NavLink
+              to="/roadmap"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-emerald-500/20 bg-emerald-500/5 text-xs text-emerald-300 hover:border-emerald-400/30 hover:bg-emerald-500/10 transition-all"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M12 1.586l-4 4v12.828l4-4V1.586zM3.707 3.293A1 1 0 002 4v10a1 1 0 00.293.707L6 18.414V5.586L3.707 3.293zM17.707 5.293L14 1.586v12.828l2.293 2.293A1 1 0 0018 16V6a1 1 0 00-.293-.707z" clipRule="evenodd" />
+              </svg>
+              Roadmap
+            </NavLink>
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-emerald-500/20 bg-emerald-500/5 text-xs">
               <span className="text-emerald-400 font-semibold">{solvedProblems.length}</span>
               <span className="text-slate-400">/ {problems.length} solved</span>
@@ -332,6 +346,8 @@ function Homepage() {
 
       {/* Main Content */}
       <div className="container mx-auto p-4 sm:p-6">
+        <AlertBanner type="error" message={problemsError} className="mb-4" />
+
         {/* Page heading */}
         <div className="mb-6">
           <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-emerald-200 via-teal-200 to-slate-100 bg-clip-text text-transparent">

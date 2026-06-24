@@ -1,12 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 // import { useForm } from 'react-hook-form';
 import Editor from '@monaco-editor/react';
-import { useParams } from 'react-router';
+import { useParams, NavLink } from 'react-router';
 import axiosClient from "../utils/axiosClient"
 import SubmissionHistory from "../components/SubmissionHistory"
 import ChatAi from '../components/ChatAi';
 import Editorial from '../components/Editorial';
 import Discussions from '../components/Discussions';
+import AlertBanner from '../components/AlertBanner';
+import { getErrorMessage } from '../utils/getErrorMessage';
 
 const langMap = {
         cpp: 'c++',
@@ -38,6 +40,8 @@ const ProblemPage = () => {
   const [submitResult, setSubmitResult] = useState(null);
   const [activeLeftTab, setActiveLeftTab] = useState('description');
   const [activeRightTab, setActiveRightTab] = useState('code');
+  const [loadError, setLoadError] = useState(null);
+  const [actionError, setActionError] = useState(null);
   const editorRef = useRef(null);
   let {problemId}  = useParams();
 
@@ -48,20 +52,17 @@ const ProblemPage = () => {
  useEffect(() => {
     const fetchProblem = async () => {
       setLoading(true);
+      setLoadError(null);
       try {
-        
         const response = await axiosClient.get(`/problem/problemById/${problemId}`);
-       console.log(response.data.startCode)
-        
         const initialCode = response.data.startCode.find(sc => sc.language === langMap[selectedLanguage]).initialCode;
-
         setProblem(response.data);
-        
         setCode(initialCode);
-        setLoading(false);
-        
       } catch (error) {
         console.error('Error fetching problem:', error);
+        setLoadError(getErrorMessage(error, 'Failed to load problem'));
+        setProblem(null);
+      } finally {
         setLoading(false);
       }
     };
@@ -92,7 +93,8 @@ const ProblemPage = () => {
   const handleRun = async () => {
     setLoading(true);
     setRunResult(null);
-    
+    setActionError(null);
+
     try {
       const response = await axiosClient.post(`/submission/run/${problemId}`, {
         code,
@@ -100,39 +102,48 @@ const ProblemPage = () => {
       });
 
       setRunResult(response.data);
-      setLoading(false);
       setActiveRightTab('testcase');
-      
     } catch (error) {
       console.error('Error running code:', error);
+      const message = getErrorMessage(error, 'Failed to run code');
+      setActionError(message);
       setRunResult({
         success: false,
-        error: 'Internal server error'
+        error: message,
+        testCases: [],
       });
-      setLoading(false);
       setActiveRightTab('testcase');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleSubmitCode = async () => {
     setLoading(true);
     setSubmitResult(null);
-    
+    setActionError(null);
+
     try {
-        const response = await axiosClient.post(`/submission/submit/${problemId}`, {
-        code:code,
+      const response = await axiosClient.post(`/submission/submit/${problemId}`, {
+        code,
         language: selectedLanguage
       });
 
-       setSubmitResult(response.data);
-       setLoading(false);
-       setActiveRightTab('result');
-      
+      setSubmitResult(response.data);
+      setActiveRightTab('result');
     } catch (error) {
       console.error('Error submitting code:', error);
-      setSubmitResult(null);
-      setLoading(false);
+      const message = getErrorMessage(error, 'Failed to submit solution');
+      setActionError(message);
+      setSubmitResult({
+        accepted: false,
+        error: message,
+        passedTestCases: 0,
+        totalTestCases: 0,
+      });
       setActiveRightTab('result');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -164,13 +175,24 @@ const ProblemPage = () => {
   const panelCardClass =
     'rounded-xl border border-emerald-500/20 bg-gradient-to-br from-slate-800/80 to-slate-900/90 shadow-[inset_0_1px_0_rgba(52,211,153,0.08),0_4px_20px_rgba(0,0,0,0.35)]';
 
-  if (loading && !problem) {
+  if (loading && !problem && !loadError) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950/40">
         <div className="flex flex-col items-center gap-4">
           <span className="loading loading-spinner loading-lg text-emerald-400"></span>
           <p className="text-emerald-400/70 text-sm tracking-wide">Loading problem...</p>
         </div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950/30 text-slate-200 p-6">
+        <AlertBanner type="error" message={loadError} className="max-w-md mb-4" />
+        <NavLink to="/" className="px-4 py-2 rounded-lg border border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10">
+          Back to Problems
+        </NavLink>
       </div>
     );
   }
@@ -250,7 +272,11 @@ const ProblemPage = () => {
                     Editorial
                   </h2>
                   <div className={`${panelCardClass} p-5`}>
-                    <Editorial secureUrl={problem.secureUrl} thumbnailUrl={problem.thumbnailUrl} duration={problem.duration}/>
+                    {problem.secureUrl ? (
+                      <Editorial secureUrl={problem.secureUrl} thumbnailUrl={problem.thumbnailUrl} duration={problem.duration}/>
+                    ) : (
+                      <p className="text-slate-500 italic text-sm">No editorial video available for this problem yet.</p>
+                    )}
                   </div>
                 </div>
               )}
@@ -333,6 +359,11 @@ const ProblemPage = () => {
 
         {/* Right Content */}
         <div className="flex-1 flex flex-col min-h-0">
+          {actionError && (
+            <div className="px-4 pt-3">
+              <AlertBanner type="error" message={actionError} onDismiss={() => setActionError(null)} />
+            </div>
+          )}
           {activeRightTab === 'code' && (
             <div className="flex-1 flex flex-col min-h-0">
               {/* Language Selector */}
@@ -448,7 +479,8 @@ const ProblemPage = () => {
                       </div>
                     ) : (
                       <div>
-                        <h4 className="font-bold text-rose-300">Error</h4>
+                        <h4 className="font-bold text-rose-300">{runResult.error || 'Run failed'}</h4>
+                        {runResult.testCases?.length > 0 && (
                         <div className="mt-4 space-y-2">
                           {runResult.testCases.map((tc, i) => (
                             <div key={i} className="bg-slate-950/50 p-3 rounded-lg border border-emerald-500/15 text-xs">
@@ -463,6 +495,7 @@ const ProblemPage = () => {
                             </div>
                           ))}
                         </div>
+                        )}
                       </div>
                     )}
                   </div>

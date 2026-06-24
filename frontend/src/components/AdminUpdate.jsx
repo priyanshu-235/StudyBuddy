@@ -4,6 +4,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { NavLink, useNavigate, useParams } from 'react-router';
 import axiosClient from '../utils/axiosClient';
+import AlertBanner from './AlertBanner';
+import { getErrorMessage } from '../utils/getErrorMessage';
 
 const problemSchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -112,7 +114,7 @@ function UpdateProblemList() {
         setProblems(data);
         setError(null);
       } catch (err) {
-        setError('Failed to fetch problems');
+        setError(getErrorMessage(err, 'Failed to fetch problems'));
         console.error(err);
       } finally {
         setLoading(false);
@@ -132,8 +134,8 @@ function UpdateProblemList() {
 
   if (error) {
     return (
-      <div className="alert alert-error shadow-lg my-4">
-        <span>{error}</span>
+      <div className="container mx-auto p-4">
+        <AlertBanner type="error" message={error} className="mb-4" />
       </div>
     );
   }
@@ -202,6 +204,8 @@ function UpdateProblemForm({ problemId }) {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [fetchError, setFetchError] = useState(null);
+  const [submitError, setSubmitError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
 
   const {
     register,
@@ -241,7 +245,7 @@ function UpdateProblemForm({ problemId }) {
         setFetchError(null);
       } catch (err) {
         console.error(err);
-        setFetchError('Failed to load problem details');
+        setFetchError(getErrorMessage(err, 'Failed to load problem details'));
       } finally {
         setLoading(false);
       }
@@ -253,12 +257,12 @@ function UpdateProblemForm({ problemId }) {
   const onSubmit = async (data) => {
     try {
       setSubmitting(true);
+      setSubmitError(null);
       await axiosClient.put(`/problem/update/${problemId}`, data);
-      alert('Problem updated successfully!');
-      navigate('/admin/update');
+      setSuccessMessage('Problem updated successfully!');
+      setTimeout(() => navigate('/admin/update'), 1500);
     } catch (error) {
-      const message = error.response?.data || error.message || 'Failed to update problem';
-      alert(`Error: ${typeof message === 'string' ? message : 'Failed to update problem'}`);
+      setSubmitError(getErrorMessage(error, 'Failed to update problem'));
     } finally {
       setSubmitting(false);
     }
@@ -275,9 +279,7 @@ function UpdateProblemForm({ problemId }) {
   if (fetchError) {
     return (
       <div className="container mx-auto p-4">
-        <div className="alert alert-error shadow-lg my-4">
-          <span>{fetchError}</span>
-        </div>
+        <AlertBanner type="error" message={fetchError} className="mb-4" />
         <NavLink to="/admin/update" className="btn btn-ghost mt-4">
           Back to Problem List
         </NavLink>
@@ -296,6 +298,9 @@ function UpdateProblemForm({ problemId }) {
           Back to List
         </NavLink>
       </div>
+
+      <AlertBanner type="error" message={submitError} onDismiss={() => setSubmitError(null)} className="mb-4" />
+      <AlertBanner type="success" message={successMessage} className="mb-4" />
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="card bg-base-100 shadow-lg p-6">
