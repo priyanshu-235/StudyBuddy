@@ -35,7 +35,17 @@ const register = async (req,res)=>{
     })
     }
     catch(err){
-        res.status(400).send("Error: "+err);
+        if(err.code === 11000){
+            const field = Object.keys(err.keyPattern)[0];
+            return res.status(409).json({
+                error: `${field} already exists`,
+                message: `A user with this ${field} is already registered`
+            });
+        }
+        res.status(400).json({
+            error: "Registration failed",
+            message: err.message
+        });
     }
 }
 
@@ -122,7 +132,17 @@ const adminRegister = async(req,res)=>{
      res.status(201).send("User Registered Successfully");
     }
     catch(err){
-        res.status(400).send("Error: "+err);
+        if(err.code === 11000){
+            const field = Object.keys(err.keyPattern)[0];
+            return res.status(409).json({
+                error: `${field} already exists`,
+                message: `A user with this ${field} is already registered`
+            });
+        }
+        res.status(400).json({
+            error: "Registration failed",
+            message: err.message
+        });
     }
 }
 

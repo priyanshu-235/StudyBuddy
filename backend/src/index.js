@@ -11,6 +11,7 @@ const aiRouter = require("./routes/aiChatting")
 const videoRouter = require("./routes/videoCreator");
 const discussionRouter = require("./routes/discussion");
 const roadmapRouter = require("./routes/roadmap");
+const cacheRouter = require("./routes/cache");
 const cors = require('cors')
 
 // console.log("Hello")
@@ -30,6 +31,7 @@ app.use('/ai',aiRouter);
 app.use("/video",videoRouter);
 app.use('/discussion', discussionRouter);
 app.use('/roadmap', roadmapRouter);
+app.use('/cache', cacheRouter);
 
 
 const InitalizeConnection = async ()=>{

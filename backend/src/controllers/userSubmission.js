@@ -2,6 +2,7 @@ const Problem = require("../models/problem");
 const Submission = require("../models/submission");
 const User = require("../models/user");
 const {getLanguageById,submitBatch,submitToken} = require("../utils/problemUtility");
+const { getFirstSubmissionFailure, sendJudge0Error } = require("../utils/executionResponse");
 
 const submitCode = async (req,res)=>{
    
@@ -70,12 +71,18 @@ const submitCode = async (req,res)=>{
            memory = Math.max(memory,test.memory);
         }else{
           if(test.status_id==4){
+            status = 'wrong'
+          }
+          else if(test.status_id==6){
             status = 'error'
-            errorMessage = test.stderr
           }
           else{
-            status = 'wrong'
-            errorMessage = test.stderr
+            status = 'error'
+          }
+
+          if(!errorMessage){
+            const failure = getFirstSubmissionFailure([test]);
+            errorMessage = failure?.detail || failure?.explanation || test.stderr || null;
           }
         }
     }
@@ -110,87 +117,13 @@ const submitCode = async (req,res)=>{
        
     }
     catch(err){
-      res.status(500).send("Internal Server Error "+ err);
+      console.error('Submission error:', err);
+      return sendJudge0Error(res, err);
     }
 }
 
 
-const runCode = async(req,res)=>{
-    
-     // 
-     try{
-      const userId = req.result._id;
-      const problemId = req.params.id;
-
-      let {code,language} = req.body;
-
-     if(!userId||!code||!problemId||!language)
-       return res.status(400).send("Some field missing");
-
-   //    Fetch the problem from database
-      const problem =  await Problem.findById(problemId);
-   //    testcases(Hidden)
-      if(language==='cpp')
-        language='c++'
-
-   //    Judge0 code ko submit karna hai
-
-   const languageId = getLanguageById(language);
-
-   const submissions = problem.visibleTestCases.map((testcase)=>({
-       source_code:code,
-       language_id: languageId,
-       stdin: testcase.input,
-       expected_output: testcase.output
-   }));
-
-
-   const submitResult = await submitBatch(submissions);
-   
-   const resultToken = submitResult.map((value)=> value.token);
-
-   const testResult = await submitToken(resultToken);
-
-    let testCasesPassed = 0;
-    let runtime = 0;
-    let memory = 0;
-    let status = true;
-    let errorMessage = null;
-
-    for(const test of testResult){
-        if(test.status_id==3){
-           testCasesPassed++;
-           runtime = runtime+parseFloat(test.time)
-           memory = Math.max(memory,test.memory);
-        }else{
-          if(test.status_id==4){
-            status = false
-            errorMessage = test.stderr
-          }
-          else{
-            status = false
-            errorMessage = test.stderr
-          }
-        }
-    }
-
-   
-  
-   res.status(201).json({
-    success:status,
-    testCases: testResult,
-    runtime,
-    memory
-   });
-      
-   }
-   catch(err){
-     res.status(500).send("Internal Server Error "+ err);
-   }
-}
-
-
-module.exports = {submitCode,runCode};
+module.exports = { submitCode };
 
 
 

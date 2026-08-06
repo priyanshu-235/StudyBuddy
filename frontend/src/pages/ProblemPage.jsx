@@ -9,6 +9,7 @@ import Editorial from '../components/Editorial';
 import Discussions from '../components/Discussions';
 import AlertBanner from '../components/AlertBanner';
 import { getErrorMessage } from '../utils/getErrorMessage';
+import { getJudge0ErrorDetails, getPrimaryRunFailure } from '../utils/judge0Status';
 
 const langMap = {
         cpp: 'c++',
@@ -101,7 +102,10 @@ const ProblemPage = () => {
         language: selectedLanguage
       });
 
-      setRunResult(response.data);
+      setRunResult({
+        ...response.data.output,
+        cached: response.data.cached,
+      });
       setActiveRightTab('testcase');
     } catch (error) {
       console.error('Error running code:', error);
@@ -455,6 +459,17 @@ const ProblemPage = () => {
               </h3>
               {runResult ? (
                 <div className={`${panelCardClass} p-4 mb-4 ${runResult.success ? 'border-emerald-500/30' : 'border-rose-500/30'}`}>
+                  {runResult.testCases?.length > 0 && (
+                    <div className="mb-3">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${
+                        runResult.cached
+                          ? 'border-amber-400/40 text-amber-300 bg-amber-500/10'
+                          : 'border-slate-500/40 text-slate-400 bg-slate-500/10'
+                      }`}>
+                        {runResult.cached ? '⚡ Served from Cache' : 'Executed Normally'}
+                      </span>
+                    </div>
+                  )}
                   <div>
                     {runResult.success ? (
                       <div>
@@ -479,21 +494,56 @@ const ProblemPage = () => {
                       </div>
                     ) : (
                       <div>
-                        <h4 className="font-bold text-rose-300">{runResult.error || 'Run failed'}</h4>
+                        {(() => {
+                          const primaryFailure = getPrimaryRunFailure(runResult.testCases);
+                          const headline =
+                            runResult.error ||
+                            primaryFailure?.status ||
+                            'Run failed';
+                          const explanation =
+                            !runResult.error && primaryFailure?.explanation;
+
+                          return (
+                            <>
+                              <h4 className="font-bold text-rose-300">{headline}</h4>
+                              {explanation && (
+                                <p className="text-sm text-rose-300/80 mt-2">{explanation}</p>
+                              )}
+                            </>
+                          );
+                        })()}
                         {runResult.testCases?.length > 0 && (
                         <div className="mt-4 space-y-2">
-                          {runResult.testCases.map((tc, i) => (
-                            <div key={i} className="bg-slate-950/50 p-3 rounded-lg border border-emerald-500/15 text-xs">
+                          {runResult.testCases.map((tc, i) => {
+                            const errorDetails = tc.status_id !== 3 ? getJudge0ErrorDetails(tc.status_id, tc) : null;
+                            return (
+                              <div key={i} className={`bg-slate-950/50 p-3 rounded-lg border ${tc.status_id==3 ? 'border-emerald-500/15' : 'border-rose-500/30'} text-xs`}>
                               <div className="font-mono text-slate-300">
                                 <div><strong className="text-emerald-400/70">Input:</strong> {tc.stdin}</div>
                                 <div><strong className="text-emerald-400/70">Expected:</strong> {tc.expected_output}</div>
-                                <div><strong className="text-emerald-400/70">Output:</strong> {tc.stdout}</div>
+                                <div><strong className="text-emerald-400/70">Output:</strong> {tc.stdout ?? '(no output)'}</div>
                                 <div className={tc.status_id==3 ? 'text-emerald-400 mt-1' : 'text-rose-400 mt-1'}>
-                                  {tc.status_id==3 ? 'Passed' : 'Failed'}
+                                  {tc.status_id==3 ? 'Passed' : errorDetails?.status || 'Failed'}
                                 </div>
+                                {errorDetails?.explanation && tc.status_id !== 3 && (
+                                  <div className="text-rose-300/80 mt-2 text-xs italic">
+                                    {errorDetails.explanation}
+                                  </div>
+                                )}
+                                {errorDetails?.compileOutput && (
+                                  <div className="mt-2 p-2 bg-rose-950/30 rounded text-rose-200/70 font-mono text-xs whitespace-pre-wrap">
+                                    {errorDetails.compileOutput}
+                                  </div>
+                                )}
+                                {errorDetails?.stderr && (
+                                  <div className="mt-2 p-2 bg-rose-950/30 rounded text-rose-200/70 font-mono text-xs whitespace-pre-wrap">
+                                    {errorDetails.stderr}
+                                  </div>
+                                )}
                               </div>
                             </div>
-                          ))}
+                            );
+                          })}
                         </div>
                         )}
                       </div>
@@ -528,9 +578,16 @@ const ProblemPage = () => {
                       </div>
                     ) : (
                       <div>
-                        <h4 className="font-bold text-lg text-rose-300">{submitResult.error}</h4>
+                        <h4 className="font-bold text-lg text-rose-300">
+                          {submitResult.error || 'Wrong Answer'}
+                        </h4>
                         <div className="mt-4 space-y-2 text-slate-300">
                           <p>Test Cases Passed: {submitResult.passedTestCases}/{submitResult.totalTestCases}</p>
+                          {submitResult.passedTestCases < submitResult.totalTestCases && (
+                            <p className="text-rose-300/80 text-sm mt-2">
+                              Some test cases failed. Try running your code with the test cases to debug.
+                            </p>
+                          )}
                         </div>
                       </div>
                     )}
