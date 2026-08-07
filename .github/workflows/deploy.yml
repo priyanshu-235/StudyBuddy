@@ -19,6 +19,9 @@ jobs:
         with:
           node-version: "24.19.0"
           cache: "npm"
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
 
       # Backend build
       - name: Install backend dependencies
@@ -40,6 +43,7 @@ jobs:
           npm run build
           mkdir -p ../deploy/frontend-dist
           cp -r dist ../deploy/frontend-dist
+
 
       - name: Create deployment package
         run: |
