@@ -92,7 +92,7 @@ jobs:
             deploy.tar.gz ${EC2_USERNAME}@${EC2_HOST}:/tmp/
 
           ssh -i private_key.pem -o StrictHostKeyChecking=no \
-            ${EC2_USERNAME}@${EC2_HOST} << 'EOF'
+            ${EC2_USERNAME}@${EC2_HOST} << EOF
 
             cd ~/StudyBuddy
 
@@ -128,6 +128,7 @@ jobs:
             CLOUDINARY_URL=${CLOUDINARY_URL}
             DEFAULT_PROBLEM_CREATOR_ID=${DEFAULT_PROBLEM_CREATOR_ID}
             EOL
+
 
             mkdir -p logs
 
