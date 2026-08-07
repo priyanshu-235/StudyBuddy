@@ -125,7 +125,6 @@ jobs:
             echo "CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}" >> .env
             echo "CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}" >> .env
             echo "CLOUDINARY_URL=${CLOUDINARY_URL}" >> .env
-            echo "DEFAULT_PROBLEM_CREATOR_ID=${DEFAULT_PROBLEM_CREATOR_ID}" >> .env
 
             mkdir -p logs
 
@@ -141,10 +140,11 @@ jobs:
             cd ~/StudyBuddy/frontend
             rm -rf dist
             mkdir dist
-            cp -r ../deploy/frontend-dist/* ./dist/
+            cp -r ../frontend-dist/* ./dist/
 
             # Reload nginx
             sudo systemctl reload nginx
+
           EOF
 
           rm private_key.pem
