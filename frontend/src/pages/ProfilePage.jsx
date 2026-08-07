@@ -3,6 +3,7 @@ import { NavLink } from 'react-router';
 import axiosClient from '../utils/axiosClient';
 import AlertBanner from '../components/AlertBanner';
 import { getErrorMessage } from '../utils/getErrorMessage';
+import ActivityCalendar from '../components/ActivityCalendar';
 
 const panelCardClass =
   'rounded-xl border border-emerald-500/20 bg-gradient-to-br from-slate-800/80 to-slate-900/90 shadow-[inset_0_1px_0_rgba(52,211,153,0.08),0_4px_20px_rgba(0,0,0,0.35)]';
@@ -240,6 +241,15 @@ function ProfilePage() {
 
             {activeTab === 'overview' && (
               <div className="space-y-4">
+                {/* Activity Calendar */}
+                <div className={panelCardClass + ' p-5'}>
+                  <h3 className="text-lg font-semibold text-emerald-300/90 mb-4 flex items-center gap-2">
+                    <span className="w-1 h-5 rounded-full bg-gradient-to-b from-emerald-400 to-teal-600" />
+                    Yearly Activity
+                  </h3>
+                  <ActivityCalendar />
+                </div>
+
                 <div className={panelCardClass + ' p-5'}>
                   <h3 className="text-lg font-semibold text-emerald-300/90 mb-4 flex items-center gap-2">
                     <span className="w-1 h-5 rounded-full bg-gradient-to-b from-emerald-400 to-teal-600" />

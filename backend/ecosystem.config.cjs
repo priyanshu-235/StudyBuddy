@@ -2,7 +2,7 @@ module.exports = {
   apps: [
     {
       name: "express-app",
-      script: "./backend/src/index.js",
+      script: "./src/index.js",
       instances: "1",
       exec_mode: "cluster",
       watch: false,

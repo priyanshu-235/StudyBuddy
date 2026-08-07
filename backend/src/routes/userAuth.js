@@ -18,6 +18,7 @@ authRouter.get('/check',userMiddleware,(req,res)=>{
         emailId: req.result.emailId,
         _id:req.result._id,
         role:req.result.role,
+        aiChatCalls: req.result.aiChatCalls || 0,
     }
 
     res.status(200).json({

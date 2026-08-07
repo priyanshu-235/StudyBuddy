@@ -23,6 +23,41 @@ const DEFAULT_TOPICS = [
     title: 'Dynamic Programming',
     description: 'Build intuition for state transitions and optimal substructure.',
   },
+  {
+    topic: 'string',
+    title: 'String',
+    description: 'String manipulation, pattern matching, and string algorithms.',
+  },
+  {
+    topic: 'tree',
+    title: 'Tree',
+    description: 'Binary trees, BST, tree traversal, and tree-based problems.',
+  },
+  {
+    topic: 'math',
+    title: 'Math',
+    description: 'Mathematical concepts, number theory, and matrix operations.',
+  },
+  {
+    topic: 'greedy',
+    title: 'Greedy',
+    description: 'Greedy algorithms and optimization problems.',
+  },
+  {
+    topic: 'backtracking',
+    title: 'Backtracking',
+    description: 'Backtracking algorithms and combinatorial problems.',
+  },
+  {
+    topic: 'sorting',
+    title: 'Sorting',
+    description: 'Sorting algorithms and their applications.',
+  },
+  {
+    topic: 'searching',
+    title: 'Searching',
+    description: 'Binary search and other search algorithms.',
+  },
 ];
 
 const ensureDefaultTopics = async () => {
@@ -82,7 +117,7 @@ const getRoadmap = async (req, res) => {
     const overallTotal = formattedTopics.reduce((sum, t) => sum + t.totalCount, 0);
     const overallSolved = formattedTopics.reduce((sum, t) => sum + t.solvedCount, 0);
 
-    const topicOrder = ['array', 'linkedList', 'graph', 'dp'];
+    const topicOrder = ['array', 'linkedList', 'graph', 'dp', 'string', 'tree', 'math', 'greedy', 'backtracking', 'sorting', 'searching'];
     formattedTopics.sort(
       (a, b) => topicOrder.indexOf(a.topic) - topicOrder.indexOf(b.topic)
     );

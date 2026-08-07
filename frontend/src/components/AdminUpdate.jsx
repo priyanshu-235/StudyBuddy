@@ -359,6 +359,27 @@ function UpdateProblemForm({ problemId }) {
                   <option value="linkedList">Linked List</option>
                   <option value="graph">Graph</option>
                   <option value="dp">DP</option>
+                  <option value="dynamic programming">Dynamic Programming</option>
+                  <option value="string">String</option>
+                  <option value="math">Math</option>
+                  <option value="matrix exponentiation">Matrix Exponentiation</option>
+                  <option value="bit manipulation">Bit Manipulation</option>
+                  <option value="binary search">Binary Search</option>
+                  <option value="matrix">Matrix</option>
+                  <option value="sorting">Sorting</option>
+                  <option value="searching">Searching</option>
+                  <option value="greedy">Greedy</option>
+                  <option value="backtracking">Backtracking</option>
+                  <option value="divide and conquer">Divide and Conquer</option>
+                  <option value="stack">Stack</option>
+                  <option value="queue">Queue</option>
+                  <option value="heap">Heap</option>
+                  <option value="tree">Tree</option>
+                  <option value="trie">Trie</option>
+                  <option value="hash table">Hash Table</option>
+                  <option value="hashing">Hashing</option>
+                  <option value="sliding window">Sliding Window</option>
+                  <option value="recursion">Recursion</option>
                 </select>
               </div>
             </div>

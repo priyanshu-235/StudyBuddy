@@ -26,12 +26,13 @@ const register = async (req,res)=>{
         emailId: user.emailId,
         _id: user._id,
         role:user.role,
+        aiChatCalls: user.aiChatCalls || 0,
     }
     
      res.cookie('token',token,{maxAge: 60*60*1000});
      res.status(201).json({
         user:reply,
-        message:"Loggin Successfully"
+        message:"Login Successfully"
     })
     }
     catch(err){
@@ -76,13 +77,14 @@ const login = async (req,res)=>{
             emailId: user.emailId,
             _id: user._id,
             role:user.role,
+            aiChatCalls: user.aiChatCalls || 0,
         }
 
         const token =  jwt.sign({_id:user._id , emailId:emailId, role:user.role},process.env.JWT_KEY,{expiresIn: 60*60});
         res.cookie('token',token,{maxAge: 60*60*1000});
         res.status(201).json({
             user:reply,
-            message:"Loggin Successfully"
+            message:"Login Successfully"
         })
     }
     catch(err){
@@ -106,7 +108,7 @@ const logout = async(req,res)=>{
     //    Cookies ko clear kar dena.....
 
     res.cookie("token",null,{expires: new Date(Date.now())});
-    res.send("Logged Out Succesfully");
+    res.send("Logged Out Successfully");
 
     }
     catch(err){
@@ -128,8 +130,20 @@ const adminRegister = async(req,res)=>{
     
      const user =  await User.create(req.body);
      const token =  jwt.sign({_id:user._id , emailId:emailId, role:user.role},process.env.JWT_KEY,{expiresIn: 60*60});
+     
+     const reply = {
+        firstName: user.firstName,
+        emailId: user.emailId,
+        _id: user._id,
+        role:user.role,
+        aiChatCalls: user.aiChatCalls || 0,
+    }
+     
      res.cookie('token',token,{maxAge: 60*60*1000});
-     res.status(201).send("User Registered Successfully");
+     res.status(201).json({
+        user:reply,
+        message:"User Registered Successfully"
+    });
     }
     catch(err){
         if(err.code === 11000){
@@ -208,6 +222,7 @@ const getProfile = async (req, res) => {
                 age: user.age,
                 role: user.role,
                 memberSince: user.createdAt,
+                aiChatCalls: user.aiChatCalls || 0,
             },
             stats: {
                 totalSolved: user.problemSolved.length,

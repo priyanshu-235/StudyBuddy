@@ -1,7 +1,8 @@
 const { GoogleGenAI } = require('@google/genai');
 const { buildSystemInstruction } = require('../utils/aiPrompt');
+const { incrementAiCallCount } = require('../middleware/aiRateLimiter');
 
-const GEMINI_MODEL = 'gemini-2.5-flash';
+const GEMINI_MODEL = 'gemini-2.5-pro';
 
 function createAiClient() {
   return new GoogleGenAI({ apiKey: process.env.GEMINI_KEY });
@@ -31,6 +32,7 @@ const solveDoubtStream = async (req, res) => {
   }
 
   let clientClosed = false;
+  let aiCallSuccessful = false;
 
   req.on('close', () => {
     clientClosed = true;
@@ -51,6 +53,8 @@ const solveDoubtStream = async (req, res) => {
         }),
       },
     });
+
+    aiCallSuccessful = true;
 
     for await (const chunk of stream) {
       if (clientClosed) {
@@ -84,6 +88,11 @@ const solveDoubtStream = async (req, res) => {
     });
     res.end();
   }
+
+  // Increment AI call count if successful
+  if (aiCallSuccessful && req.userForAiTracking) {
+    await incrementAiCallCount(req.userForAiTracking._id);
+  }
 };
 
 const solveDoubt = async (req, res) => {
@@ -111,6 +120,11 @@ const solveDoubt = async (req, res) => {
         }),
       },
     });
+
+    // Increment AI call count after successful response
+    if (req.userForAiTracking) {
+      await incrementAiCallCount(req.userForAiTracking._id);
+    }
 
     return res.status(201).json({
       message: response.text,

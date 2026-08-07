@@ -7,11 +7,12 @@ const {
 function createRateLimitService(redisClient, options = {}) {
   const maxRequests = options.maxRequests ?? RUN_RATE_LIMIT_MAX;
   const windowSeconds = options.windowSeconds ?? RUN_RATE_LIMIT_WINDOW_SECONDS;
+  const keyPrefix = options.keyPrefix ?? RUN_RATE_LIMIT_KEY_PREFIX;
   const isReady =
     options.isReady ?? (() => redisClient?.isReady ?? false);
 
   function buildKey(userId) {
-    return `${RUN_RATE_LIMIT_KEY_PREFIX}${userId}`;
+    return `${keyPrefix}${userId}`;
   }
 
   async function checkLimit(userId) {

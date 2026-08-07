@@ -6,8 +6,19 @@ const RUN_RATE_LIMIT_WINDOW_SECONDS = parseInt(
 
 const RUN_RATE_LIMIT_KEY_PREFIX = 'ratelimit:run:';
 
+const AI_RATE_LIMIT_MAX = parseInt(process.env.AI_RATE_LIMIT_MAX || '5', 10);
+const AI_RATE_LIMIT_WINDOW_SECONDS = parseInt(
+  process.env.AI_RATE_LIMIT_WINDOW_SECONDS || '3600',
+  10
+);
+
+const AI_RATE_LIMIT_KEY_PREFIX = 'ratelimit:ai:';
+
 module.exports = {
   RUN_RATE_LIMIT_MAX,
   RUN_RATE_LIMIT_WINDOW_SECONDS,
   RUN_RATE_LIMIT_KEY_PREFIX,
+  AI_RATE_LIMIT_MAX,
+  AI_RATE_LIMIT_WINDOW_SECONDS,
+  AI_RATE_LIMIT_KEY_PREFIX,
 };

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 // import { useForm } from 'react-hook-form';
 import Editor from '@monaco-editor/react';
 import { useParams, NavLink } from 'react-router';
+import { useSelector } from 'react-redux';
 import axiosClient from "../utils/axiosClient"
 import SubmissionHistory from "../components/SubmissionHistory"
 import ChatAi from '../components/ChatAi';
@@ -33,6 +34,7 @@ const RIGHT_TABS = [
 ];
 
 const ProblemPage = () => {
+  const { user } = useSelector((state) => state.auth);
   const [problem, setProblem] = useState(null);
   const [selectedLanguage, setSelectedLanguage] = useState('cpp');
   const [code, setCode] = useState('');
@@ -335,9 +337,15 @@ const ProblemPage = () => {
                   <h2 className="text-xl font-bold mb-4 text-emerald-300/90 flex items-center gap-2">
                     <span className="w-1 h-6 rounded-full bg-gradient-to-b from-emerald-400 to-teal-600"></span>
                     Chat with AI
+                    <span className="text-sm font-normal text-slate-400 ml-2">
+                      {user?.role === 'admin' 
+                        ? '(Unlimited - Admin)' 
+                        : `(${user?.aiChatCalls || 0}/5 calls used)`
+                      }
+                    </span>
                   </h2>
                   <div className={`${panelCardClass} p-5`}>
-                    <ChatAi problem={problem}></ChatAi>
+                    <ChatAi problem={problem} user={user}></ChatAi>
                   </div>
                 </div>
               )}

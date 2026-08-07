@@ -5,7 +5,7 @@ const roadmapTopicSchema = new Schema(
   {
     topic: {
       type: String,
-      enum: ['array', 'linkedList', 'graph', 'dp'],
+      enum: ['array', 'linkedList', 'graph', 'dp', 'string', 'tree', 'math', 'greedy', 'backtracking', 'sorting', 'searching'],
       required: true,
       unique: true,
     },

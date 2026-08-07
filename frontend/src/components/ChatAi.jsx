@@ -11,10 +11,12 @@ const INITIAL_MESSAGE = {
   parts: [{ text: 'Hi! Ask me anything about this problem — hints, code review, or approach guidance.' }],
 };
 
-function ChatAi({ problem }) {
+function ChatAi({ problem, user }) {
   const [messages, setMessages] = useState([INITIAL_MESSAGE]);
   const [chatError, setChatError] = useState(null);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [maxCallsExceeded, setMaxCallsExceeded] = useState(false);
+  const [remainingCalls, setRemainingCalls] = useState(5);
 
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm();
   const messagesEndRef = useRef(null);
@@ -23,6 +25,21 @@ function ChatAi({ problem }) {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isStreaming]);
+
+  useEffect(() => {
+    if (user?.aiChatCalls !== undefined) {
+      // Admins have unlimited AI calls
+      if (user.role === 'admin') {
+        setRemainingCalls('∞');
+        setMaxCallsExceeded(false);
+      } else {
+        const maxCalls = 5; // This should match the backend AI_MAX_TOTAL_CALLS
+        const remaining = maxCalls - user.aiChatCalls;
+        setRemainingCalls(remaining);
+        setMaxCallsExceeded(remaining <= 0);
+      }
+    }
+  }, [user]);
 
   useEffect(() => {
     return () => {
@@ -88,8 +105,18 @@ function ChatAi({ problem }) {
       }
 
       console.error('AI stream error:', error);
-      const message = getErrorMessage(error, 'Failed to get a response from AI');
-      setChatError(message);
+      
+      let errorMessage;
+      
+      // Check if it's a max calls exceeded error
+      if (error.response?.data?.error === 'Maximum AI calls exceeded') {
+        setMaxCallsExceeded(true);
+        errorMessage = error.response.data.message || 'You have exceeded the maximum limit of AI chat calls.';
+      } else {
+        errorMessage = getErrorMessage(error, 'Failed to get a response from AI');
+      }
+      
+      setChatError(errorMessage);
 
       setMessages((prev) => {
         const next = [...prev];
@@ -98,12 +125,12 @@ function ChatAi({ problem }) {
         if (last?.role === 'model' && !last.parts[0]?.text) {
           next[next.length - 1] = {
             role: 'model',
-            parts: [{ text: message }],
+            parts: [{ text: errorMessage }],
           };
           return next;
         }
 
-        return [...next, { role: 'model', parts: [{ text: message }] }];
+        return [...next, { role: 'model', parts: [{ text: errorMessage }] }];
       });
     } finally {
       setIsStreaming(false);
@@ -111,6 +138,7 @@ function ChatAi({ problem }) {
   };
 
   const isBusy = isStreaming || isSubmitting;
+  const isAdmin = user?.role === 'admin';
 
   return (
     <div className="flex flex-col h-screen max-h-[80vh] min-h-[500px]">
@@ -154,15 +182,21 @@ function ChatAi({ problem }) {
       >
         <div className="flex items-center gap-2">
           <input
-            placeholder={isBusy ? 'Waiting for response…' : 'Ask for a hint, code review, or approach'}
+            placeholder={
+              !isAdmin && maxCallsExceeded 
+                ? 'You have exceeded the maximum AI chat calls limit' 
+                : isBusy 
+                  ? 'Waiting for response…' 
+                  : 'Ask for a hint, code review, or approach'
+            }
             className="input input-bordered flex-1 bg-slate-900/40 border-emerald-500/20"
-            disabled={isBusy}
+            disabled={isBusy || (!isAdmin && maxCallsExceeded)}
             {...register('message', { required: true, minLength: 2 })}
           />
           <button
             type="submit"
             className="btn btn-ghost text-emerald-300"
-            disabled={isBusy || !!errors.message}
+            disabled={isBusy || (!isAdmin && maxCallsExceeded) || !!errors.message}
           >
             {isBusy ? (
               <span className="loading loading-spinner loading-sm" />
