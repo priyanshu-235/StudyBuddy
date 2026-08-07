@@ -112,7 +112,7 @@ jobs:
             npm ci
 
             # Write .env from secrets
-            cat > .env <<EOL
+            cat <<EOL > .env
             PORT=${PORT}
             DB_CONNECT_STRING=${DB_CONNECT_STRING}
             JWT_KEY=${JWT_KEY}
