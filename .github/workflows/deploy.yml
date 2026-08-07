@@ -112,22 +112,20 @@ jobs:
             npm ci
 
             # Write .env from secrets
-            cat <<EOL > .env
-            PORT=${PORT}
-            DB_CONNECT_STRING=${DB_CONNECT_STRING}
-            JWT_KEY=${JWT_KEY}
-            REDIS_PASS=${REDIS_PASS}
-            REDIS_HOST=${REDIS_HOST}
-            REDIS_USERNAME=${REDIS_USERNAME}
-            REDIS_PORT=${REDIS_PORT}
-            JUDGE0_KEY=${JUDGE0_KEY}
-            GEMINI_KEY=${GEMINI_KEY}
-            CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
-            CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
-            CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
-            CLOUDINARY_URL=${CLOUDINARY_URL}
-            EOL
-
+            echo "PORT=${PORT}" > .env
+            echo "DB_CONNECT_STRING=${DB_CONNECT_STRING}" >> .env
+            echo "JWT_KEY=${JWT_KEY}" >> .env
+            echo "REDIS_PASS=${REDIS_PASS}" >> .env
+            echo "REDIS_HOST=${REDIS_HOST}" >> .env
+            echo "REDIS_USERNAME=${REDIS_USERNAME}" >> .env
+            echo "REDIS_PORT=${REDIS_PORT}" >> .env
+            echo "JUDGE0_KEY=${JUDGE0_KEY}" >> .env
+            echo "GEMINI_KEY=${GEMINI_KEY}" >> .env
+            echo "CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}" >> .env
+            echo "CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}" >> .env
+            echo "CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}" >> .env
+            echo "CLOUDINARY_URL=${CLOUDINARY_URL}" >> .env
+            echo "DEFAULT_PROBLEM_CREATOR_ID=${DEFAULT_PROBLEM_CREATOR_ID}" >> .env
 
             mkdir -p logs
 
