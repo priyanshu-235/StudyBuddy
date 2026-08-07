@@ -1,0 +1,149 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Application
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.19.0"
+          cache: "npm"
+
+      # Backend build
+      - name: Install backend dependencies
+        run: |
+          cd backend
+          npm ci
+          npm run build
+          mkdir -p ../deploy/backend
+          cp -r dist ../deploy/backend
+          cp -r src ../deploy/backend
+          cp package*.json ../deploy/backend
+          cp ecosystem.config.cjs ../deploy/backend
+
+      # Frontend build
+      - name: Install frontend dependencies and build
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+          mkdir -p ../deploy/frontend-dist
+          cp -r dist ../deploy/frontend-dist
+
+      - name: Create deployment package
+        run: |
+          tar -czf deploy.tar.gz -C deploy .
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-package
+          path: deploy.tar.gz
+          retention-days: 1
+
+  deploy:
+    name: Deploy to EC2
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: deployment-package
+
+      - name: Deploy to EC2 via SSH
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USERNAME: ${{ secrets.EC2_USERNAME }}
+          SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
+          PORT: ${{ secrets.PORT }}
+          DB_CONNECT_STRING: ${{ secrets.DB_CONNECT_STRING }}
+          JWT_KEY: ${{ secrets.JWT_KEY }}
+          REDIS_PASS: ${{ secrets.REDIS_PASS }}
+          REDIS_HOST: ${{ secrets.REDIS_HOST }}
+          REDIS_USERNAME: ${{ secrets.REDIS_USERNAME }}
+          REDIS_PORT: ${{ secrets.REDIS_PORT }}
+          JUDGE0_KEY: ${{ secrets.JUDGE0_KEY }}
+          GEMINI_KEY: ${{ secrets.GEMINI_KEY }}
+          CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+          CLOUDINARY_URL: ${{ secrets.CLOUDINARY_URL }}
+          DEFAULT_PROBLEM_CREATOR_ID: ${{ secrets.DEFAULT_PROBLEM_CREATOR_ID }}
+        run: |
+          echo "$SSH_PRIVATE_KEY" > private_key.pem
+          chmod 600 private_key.pem
+
+          scp -i private_key.pem -o StrictHostKeyChecking=no \
+            deploy.tar.gz ${EC2_USERNAME}@${EC2_HOST}:/tmp/
+
+          ssh -i private_key.pem -o StrictHostKeyChecking=no \
+            ${EC2_USERNAME}@${EC2_HOST} << 'EOF'
+
+            cd ~/StudyBuddy
+
+            # Backup backend
+            cd backend
+            timestamp=$(date +%Y%m%d_%H%M%S)
+            mkdir -p backups
+            tar -czf backups/backup_${timestamp}.tar.gz dist package.json ecosystem.config.cjs .env 2>/dev/null || true
+            ls -t backups/backup_*.tar.gz 2>/dev/null | tail -n +6 | xargs -r rm
+
+            # Extract new backend + frontend
+            tar --overwrite -xzf /tmp/deploy.tar.gz -C ~/StudyBuddy
+            rm /tmp/deploy.tar.gz
+
+            # Backend deps
+            cd ~/StudyBuddy/backend
+            npm ci
+
+            # Write .env from secrets
+            cat > .env <<EOL
+            PORT=${PORT}
+            DB_CONNECT_STRING=${DB_CONNECT_STRING}
+            JWT_KEY=${JWT_KEY}
+            REDIS_PASS=${REDIS_PASS}
+            REDIS_HOST=${REDIS_HOST}
+            REDIS_USERNAME=${REDIS_USERNAME}
+            REDIS_PORT=${REDIS_PORT}
+            JUDGE0_KEY=${JUDGE0_KEY}
+            GEMINI_KEY=${GEMINI_KEY}
+            CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
+            CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+            CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+            CLOUDINARY_URL=${CLOUDINARY_URL}
+            DEFAULT_PROBLEM_CREATOR_ID=${DEFAULT_PROBLEM_CREATOR_ID}
+            EOL
+
+            mkdir -p logs
+
+            # Reload PM2
+            if pm2 describe express-app > /dev/null 2>&1; then
+              pm2 reload ecosystem.config.cjs --update-env
+            else
+              pm2 start ecosystem.config.cjs
+            fi
+            pm2 save
+
+            # Deploy frontend build
+            cd ~/StudyBuddy/frontend
+            rm -rf dist
+            cp -r ../deploy/frontend-dist/* ./dist/
+
+            # Reload nginx
+            sudo systemctl reload nginx
+          EOF
+
+          rm private_key.pem
