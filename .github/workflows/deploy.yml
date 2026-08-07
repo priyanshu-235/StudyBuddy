@@ -28,9 +28,7 @@ jobs:
         run: |
           cd backend
           npm ci
-          npm run build
           mkdir -p ../deploy/backend
-          cp -r dist ../deploy/backend
           cp -r src ../deploy/backend
           cp package*.json ../deploy/backend
           cp ecosystem.config.cjs ../deploy/backend
