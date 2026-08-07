@@ -39,8 +39,8 @@ jobs:
           cd frontend
           npm ci
           npm run build
-          mkdir -p ../deploy/frontend-dist
-          cp -r dist ../deploy/frontend-dist
+          mkdir -p deploy/frontend-dist
+          cp -r frontend/dist/* deploy/frontend-dist/
 
 
       - name: Create deployment package
@@ -142,6 +142,7 @@ jobs:
             # Deploy frontend build
             cd ~/StudyBuddy/frontend
             rm -rf dist
+            mkdir dist
             cp -r ../deploy/frontend-dist/* ./dist/
 
             # Reload nginx
