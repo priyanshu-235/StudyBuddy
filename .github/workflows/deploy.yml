@@ -40,7 +40,7 @@ jobs:
           npm ci
           npm run build
           mkdir -p deploy/frontend-dist
-          cp -r frontend/dist/* deploy/frontend-dist/
+          cp -r dist/* deploy/frontend-dist/
 
 
       - name: Create deployment package
